@@ -25,7 +25,7 @@ memory.limit(size = 25000)
 Sys.setlocale(locale = "chs")
 #------find a location and create one folder for running-----------------#
 #--------------define your directory-------------------------------------#
-my_dir<-"C:/005 Decker/005 Decker/002 model/calc"
+my_dir<-"C:/abcd"
 #-----------------------------BACK UP -------------------#
 print("create folders for decomped results and back up last mdoel results")
 if(!file.exists(paste(my_dir,"results", sep="/"))){
@@ -56,14 +56,14 @@ week_map<-read_excel(paste(my_dir,"time map.xlsx", sep="/"),
                      sheet = "week")%>%
   mutate(week=ymd(week))
 
-spending<-read_excel(paste(my_dir,"spending ugg.xlsx", sep="/"),
+spending<-read_excel(paste(my_dir,"spending.xlsx", sep="/"),
                      sheet = "raw")%>%
   clean_names()%>%
   mutate(week=ymd(week))
 spending<-setDT(spending)
-setnames(spending, "var_ugg_cn", "var_ugg.cn")
+setnames(spending, "var_1", "var_2")
 spending<-spending[,by=.(mkt, variable_key, var_map, 
-                         var_ugg.cn, var_tmall, var_whs, var_dtc, week,metric_name),
+                         var_chn1, var_chn2, var_chn3, var_chn4, week,metric_name),
                    .(actual_spending_rmb=sum(actual_spending_rmb, na.rm=TRUE),
                      metric=sum(metric,na.rm=TRUE),
                      clicks=sum(clicks,na.rm=TRUE),
@@ -73,7 +73,6 @@ spending<-spending[,by=.(mkt, variable_key, var_map,
                      views=sum(views,na.rm=TRUE))]
 
 #--------------define functions------------------------#
-# file_name<-decomp_file[3]
 sales_decompose<-function(file_name){
   raw_decomp<-read_excel(file_name, sheet = "decomp")
   raw_decomp<-setDT(raw_decomp)
@@ -200,7 +199,7 @@ re_distribute<-function(my_raw_decomp){
 #--------------------------map spending----------------------------------#
 
 map_spd<-function(my_dataframe, spd_data){
-  key_names<-c("var_ugg.cn", "var_tmall", "var_whs", "var_dtc")
+  key_names<-c("var_chn1", "var_chn2", "var_chn3", "var_chn4")
   my_key<-key_names[grepl(substitute(my_dataframe),key_names)]
   my_cols<-c("mkt","week",my_key,"actual_spending_rmb",
              "metric","impressions","clicks")
@@ -231,147 +230,24 @@ decomp_file<-list.files(paste(my_dir, "decomp", sep="/"),
                         full.names = TRUE, pattern = "*xlsx")
 
 
-ugg.cn<-sales_decompose(decomp_file[grepl(pattern = "UGG.CN",decomp_file)])
-ugg.cn<-re_distribute(my_raw_decomp=ugg.cn)
-# ugg.cn_spd<-map_spd(my_dataframe = ugg.cn, spd_data = spending)
+data_1<-sales_decompose(decomp_file[grepl(pattern = "pattern1",decomp_file)])
+data_1<-re_distribute(my_raw_decomp=data_1)
 
-tmall<-sales_decompose(decomp_file[grepl(pattern = "Tmall",decomp_file)])
-tmall<-re_distribute(my_raw_decomp=tmall)
-# tmall_spd<-map_spd(my_dataframe = tmall, spd_data = spending)
+data_2<-sales_decompose(decomp_file[grepl(pattern = "pattern2",decomp_file)])
+data_2<-re_distribute(my_raw_decomp=data_2)
 
+data_3<-sales_decompose(decomp_file[grepl(pattern = "pattern3",decomp_file)])
+data_3<-re_distribute(my_raw_decomp=whs)
 
-whs<-sales_decompose(decomp_file[grepl(pattern = "WHS",decomp_file)])
-whs<-re_distribute(my_raw_decomp=whs)
-# whs_spd<-map_spd(my_dataframe = whs, spd_data = spending)
+data_4<-sales_decompose(decomp_file[grepl(pattern = "pattern4",decomp_file)])
+data_4<-re_distribute(my_raw_decomp=data_4)
 
-dtc<-sales_decompose(decomp_file[grepl(pattern = "DTC",decomp_file)])
-dtc<-re_distribute(my_raw_decomp=dtc)
-# dtc_spd<-map_spd(my_dataframe = dtc, spd_data = spending)
-
-ugg_decomp<-bind_rows(ugg.cn,tmall,whs, dtc)
-ugg_decomp<-ugg_decomp[, metric:= "Sales Unit"]
-ugg_decomp<-ugg_decomp[grepl("Traffic",Prodname),metric:= "Traffic"]
-# ugg_decomp<-ugg_decomp[,channel_group:="Retail"]
-# ugg_decomp<-ugg_decomp[channel=="UGG.CN"|channel=="Tmall",channel_group:="Online"]
-ugg_decomp_online<-ugg_decomp[channel=="UGG.CN"|channel=="Tmall",by=.(week,
-                                                                      Prodlvl, Geoglvl,
-                                                                      variable,season, IPweight,
-                                                                      Prodname,var_map, group2, group3,
-                                                                      group4, var_key, year, mat, metric),
-                              .(decomp_unit_bump=sum(decomp_unit_bump,na.rm=TRUE), 
-                                net_price=mean(net_price, na.rm=TRUE),
-                                decomp_NetRevenue=sum(decomp_NetRevenue, na.rm=TRUE),
-                                decomp_unit_adjust=sum(decomp_unit_adjust, na.rm=TRUE),
-                                decomp_NetRevenue_adjust =sum(decomp_NetRevenue_adjust, na.rm = TRUE),
-                                traffic_unit=sum(traffic_unit, na.rm=TRUE),
-                                traffic_mkt =sum(traffic_mkt, na.rm=TRUE),
-                                sold_price=mean(sold_price, na.rm=TRUE),
-                                decomp_value=sum(decomp_value, na.rm=TRUE),
-                                decomp_value_adjust =sum(decomp_value_adjust, na.rm = TRUE),
-                                decomp_unit=sum(decomp_unit,na.rm=TRUE),
-                                bumpup_factor=mean(bumpup_factor, na.rm=TRUE)
-                                )]
-
-ugg_decomp_online<-ugg_decomp_online[, c("channel","Geogname"):=list("Online", "Overall")]
-
-ugg_decomp_retail<-ugg_decomp[channel!="UGG.CN"&channel!="Tmall",by=.(week,
-                                                                      Prodlvl, Geoglvl,
-                                                                      variable,season, IPweight,
-                                                                      Prodname,var_map, group2, group3,
-                                                                      group4, var_key, year, mat, metric),
-                              .(decomp_unit_bump=sum(decomp_unit_bump,na.rm=TRUE), 
-                                net_price=mean(net_price, na.rm=TRUE),
-                                decomp_NetRevenue=sum(decomp_NetRevenue, na.rm=TRUE),
-                                decomp_unit_adjust=sum(decomp_unit_adjust, na.rm=TRUE),
-                                decomp_NetRevenue_adjust =sum(decomp_NetRevenue_adjust, na.rm = TRUE),
-                                traffic_unit=sum(traffic_unit, na.rm=TRUE),
-                                traffic_mkt =sum(traffic_mkt, na.rm=TRUE),
-                                sold_price=mean(sold_price, na.rm=TRUE),
-                                decomp_value=sum(decomp_value, na.rm=TRUE),
-                                decomp_value_adjust =sum(decomp_value_adjust, na.rm = TRUE),
-                                decomp_unit=sum(decomp_unit,na.rm=TRUE),
-                                bumpup_factor=mean(bumpup_factor, na.rm=TRUE))]
-
-ugg_decomp_retail<-ugg_decomp_retail[, c("channel","Geogname"):=list("Retail", "Overall")]
-#-------------------------------------------------------------------------------------------#
-ugg_decomp_whs<-ugg_decomp[channel=="WHS",by=.(week,
-                                               Prodlvl, Geoglvl,
-                                               variable,season, IPweight,
-                                               Prodname,var_map, group2, group3,
-                                               group4, var_key, year, mat, metric),
-                           .(decomp_unit_bump=sum(decomp_unit_bump,na.rm=TRUE), 
-                             net_price=mean(net_price, na.rm=TRUE),
-                             decomp_NetRevenue=sum(decomp_NetRevenue, na.rm=TRUE),
-                             decomp_unit_adjust=sum(decomp_unit_adjust, na.rm=TRUE),
-                             decomp_NetRevenue_adjust =sum(decomp_NetRevenue_adjust, na.rm = TRUE),
-                             traffic_unit=sum(traffic_unit, na.rm=TRUE),
-                             traffic_mkt =sum(traffic_mkt, na.rm=TRUE),
-                             sold_price=mean(sold_price, na.rm=TRUE),
-                             decomp_value=sum(decomp_value, na.rm=TRUE),
-                             decomp_value_adjust =sum(decomp_value_adjust, na.rm = TRUE),
-                             decomp_unit=sum(decomp_unit,na.rm=TRUE),
-                             bumpup_factor=mean(bumpup_factor, na.rm=TRUE))]
-
-ugg_decomp_whs<-ugg_decomp_whs[, c("channel","Geogname"):=list("WHS", "Overall")]
-
-# head(ugg_decomp[!(channel%in% c("WHS", "UGG.CN","Tmall")),],2)
-# head(ugg_decomp[(channel%in% c("UGG.CN")),],2)
-
-dtc<-dtc[, metric:= fifelse(grepl("Traffic",Prodname),
-                            "Traffic","Sales Unit")]
-
-ugg_decomp_dtc<-dtc[, by=.(week,
-                           Prodlvl, Geoglvl,
-                           variable,season, IPweight,
-                           Prodname,var_map, group2, group3,
-                           group4, var_key, year, mat, metric),
-                    .(decomp_unit_bump=sum(decomp_unit_bump,na.rm=TRUE), 
-                      net_price=mean(net_price, na.rm=TRUE),
-                      decomp_NetRevenue=sum(decomp_NetRevenue, na.rm=TRUE),
-                      decomp_unit_adjust=sum(decomp_unit_adjust, na.rm=TRUE),
-                      decomp_NetRevenue_adjust =sum(decomp_NetRevenue_adjust, na.rm = TRUE),
-                      traffic_unit=sum(traffic_unit, na.rm=TRUE),
-                      traffic_mkt =sum(traffic_mkt, na.rm=TRUE),
-                      sold_price=mean(sold_price, na.rm=TRUE),
-                      decomp_value=sum(decomp_value, na.rm=TRUE),
-                      decomp_value_adjust =sum(decomp_value_adjust, na.rm = TRUE),
-                      decomp_unit=sum(decomp_unit,na.rm=TRUE),
-                      bumpup_factor=mean(bumpup_factor, na.rm=TRUE))]
-
-ugg_decomp_dtc<-ugg_decomp_dtc[, c("channel","Geogname"):=list("DTC", "Overall")]
-
-
-
-
-#----------------------------------------------------------------------------------------------#
-ugg_decomp_all<-ugg_decomp[,by=.(week,
-                                 Prodlvl, Geoglvl,
-                                 variable,season, IPweight,
-                                 var_map, group2, group3,
-                                 group4, var_key, year, mat, metric),
-                           .(decomp_unit_bump=sum(decomp_unit_bump,na.rm=TRUE), 
-                             net_price=mean(net_price, na.rm=TRUE),
-                             decomp_NetRevenue=sum(decomp_NetRevenue, na.rm=TRUE),
-                             decomp_unit_adjust=sum(decomp_unit_adjust, na.rm=TRUE),
-                             decomp_NetRevenue_adjust =sum(decomp_NetRevenue_adjust, na.rm = TRUE),
-                             traffic_unit=sum(traffic_unit, na.rm=TRUE),
-                             traffic_mkt =sum(traffic_mkt, na.rm=TRUE),
-                             sold_price=mean(sold_price, na.rm=TRUE),
-                             decomp_value=sum(decomp_value, na.rm=TRUE),
-                             decomp_value_adjust =sum(decomp_value_adjust, na.rm = TRUE),
-                             decomp_unit=sum(decomp_unit,na.rm=TRUE),
-                             bumpup_factor=mean(bumpup_factor, na.rm=TRUE))]
-
-ugg_decomp_all<-ugg_decomp_all[, c("channel","Geogname"):=list("Overall", "Overall")]
-
-ugg_decomp<-bind_rows(ugg_decomp_all, ugg_decomp_retail, ugg_decomp_online, 
-                      ugg_decomp_dtc, ugg_decomp_whs,
-                      ugg_decomp)
-
-
+my_decomp<-bind_rows(data_1,data_2,data_3,data_4)
+my_decomp<-my_decomp[, metric:= "Sales Unit"]
+my_decomp<-my_decomp[grepl("Traffic",Prodname),metric:= "Traffic"]
 
 ###aggregate
-ugg_decomp_agg<-ugg_decomp[,by=.(metric, mat, season, 
+my_decomp_agg<-my_decomp[,by=.(metric, mat, season, 
                                  channel, Geogname,
                                  Prodlvl, Geoglvl,
                                  variable, IPweight,
@@ -394,20 +270,9 @@ ugg_decomp_agg<-ugg_decomp[,by=.(metric, mat, season,
                              bumpup_factor=mean(bumpup_factor, na.rm=TRUE))]
 
 
-# ugg_decomp_mapped_spd<-bind_rows(ugg.cn_spd, tmall_spd, whs_spd, dtc_spd)
-# ugg_decomp_mapped_spd<-ugg_decomp_mapped_spd[, metric:= fifelse(grepl("Traffic",Prodname),
-#                                           "Traffic","Sales Unit")]
+#------------------------model fit--------------------------#
 
-
-
-
-# ugg_decomp_mapped_spd<-ugg_decomp_mapped_spd[,channel_group:="Retail"]
-# ugg_decomp_mapped_spd<-ugg_decomp_mapped_spd[channel=="UGG.CN"|channel=="Tmall",
-#                                              channel_group:="Online"]
-
-#------------------------map spending--------------------------#
-
-ugg_decomp_fit<-ugg_decomp[variable=="_Actual"|variable=="_FinlFit", 
+my_decomp_fit<-my_decomp[variable=="_Actual"|variable=="_FinlFit", 
                            by=.(channel, Geogname,product, 
                                 week, season, year, mat, var_map, metric),
                            .(unitbump=sum(decomp_unit_bump, na.rm=TRUE),
@@ -417,69 +282,10 @@ ugg_decomp_fit<-ugg_decomp[variable=="_Actual"|variable=="_FinlFit",
   pivot_wider(names_from = var_map, values_from = c(unitbump, netvalue,grossvalue, unit))%>%
   arrange(channel,metric , product, Geogname, week)
 
-ugg_decomp_fit<-setDT(ugg_decomp_fit)
+my_decomp_fit<-setDT(my_decomp_fit)
 
-#-------------------chart, predict vs. actual-----------------#
-# online_chart<-ugg_decomp_fit%>%
-#   filter(channel=="UGG.CN"|channel=="Tmall")%>%
-#   ggplot(aes(x=week))+
-#   geom_line(aes(y=unit_Actual),colour="darkred", size=1)+
-#   geom_line(aes(y=unit_Predict), colour="steelblue", linetype="twodash", size=1)+
-#   facet_wrap(channel~product, scales="free_y")
-# 
-# 
-# whs_chart_sales<-ugg_decomp_fit%>%
-#   filter(channel=="WHS"& metric=="Sales Unit" )%>%
-#   ggplot(aes(x=week))+
-#   geom_line(aes(y=unit_Actual),colour="darkred", size=1)+
-#   geom_line(aes(y=unit_Predict), colour="steelblue", linetype="twodash", size=1)+
-#   facet_wrap(channel~product, scales="free_y", ncol = 2)
-# 
-# whs_chart_traffic<-ugg_decomp_fit%>%
-#   filter(channel=="WHS"& metric=="Traffic" )%>%
-#   ggplot(aes(x=week))+
-#   geom_line(aes(y=unit_Actual),colour="darkred", size=1)+
-#   geom_line(aes(y=unit_Predict), colour="steelblue", linetype="twodash", size=1)+
-#   facet_wrap(channel~product, scales="free_y",ncol = 2)
-# 
-# dtc_chart_sales<-ugg_decomp_fit%>%
-#   filter(channel=="DTC"& metric=="Sales Unit")%>%
-#   ggplot(aes(x=week))+
-#   geom_line(aes(y=unit_Actual),colour="darkred", size=1)+
-#   geom_line(aes(y=unit_Predict), colour="steelblue", linetype="twodash", size=1)+
-#   facet_wrap(channel~product, scales="free_y",ncol = 2)
-# 
-# dtc_chart_traffic<-ugg_decomp_fit%>%
-#   filter(channel=="DTC"& metric=="Traffic")%>%
-#   ggplot(aes(x=week))+
-#   geom_line(aes(y=unit_Actual),colour="darkred", size=1)+
-#   geom_line(aes(y=unit_Predict), colour="steelblue", linetype="twodash", size=1)+
-#   facet_wrap(channel~product, scales="free_y",ncol = 2)
-# 
-# pdf(paste(my_dir,"results","predict_vs_actual.pdf", sep="/"))
-# print(online_chart)
-# print(whs_chart_sales)
-# print(whs_chart_traffic)
-# print(dtc_chart_sales)
-# print(dtc_chart_traffic)
-# dev.off()
-
-#-------------------write xlsx， first time --------------------------------#
-# results<-createWorkbook()
-# addWorksheet(results, sheetName = "baseline_decomp")
-# addWorksheet(results, sheetName = "baseline_decomp_spd")
-# addWorksheet(results, sheetName = "spending")
-# addWorksheet(results, sheetName = "actual_sales")
-# 
-# writeDataTable(results, "baseline_decomp",x=ugg_decomp)
-# writeDataTable(results, "baseline_decomp_spd",x=ugg_decomp_mapped_spd)
-# writeDataTable(results, "spending",x=spending)
-# writeDataTable(results, "actual_sales",x=ugg_decomp_fit)
-# 
-# saveWorkbook(results, paste(my_dir,"results", "ugg_baseline_decomp_test.xlsx", sep="/"),
-#              overwrite = TRUE)
-
-setcolorder(ugg_decomp, neworder = c("week","Prodlvl","Geoglvl","variable","season",
+#------------------------------------write ----------------------------------------------#
+setcolorder(my_decomp, neworder = c("week","Prodlvl","Geoglvl","variable","season",
                                    "IPweight", "var_map" , "group2" ,"group3",
                                    "group4", "var_key", "year", "mat", "metric",
                                    "decomp_unit_bump", "net_price", "decomp_NetRevenue", 
@@ -491,197 +297,18 @@ setcolorder(ugg_decomp, neworder = c("week","Prodlvl","Geoglvl","variable","seas
                                    "sold_price" ,"decomp_value" ,"decomp_value_adjust",
                                    "decomp_unit","bumpup_factor"))
 
-# head(ugg_decomp)
+
 
 # Sys.setlocale(locale = "chs")
-celebrity<-read_excel(paste(my_dir,"time map.xlsx", sep="/"),
-                     sheet = "celebrity")%>%
-  mutate(week=ymd(week))
-
-celebrity<-setDT(celebrity)
-celebrity_results<-merge(ugg_decomp, celebrity[,-2], by.x= "week", by.y="week")
-
-
-
-
-# setcolorder(ugg_decomp_agg, neworder = c("metric","mat" ,"season" ,"channel",
-#                                          "Geogname","Prodlvl" ,"Geoglvl" , "variable",
-#                                      "IPweight", "var_map" , "group2" ,"group3",
-#                                      "group4", "var_key", "year", "Prodname",
-#                                      "geogkey", "prodkey" ,"BRAND","product",
-#                                      "decomp_unit", "net_price", "decomp_NetRevenue", 
-#                                      "decomp_unit_adjust",
-#                                      "decomp_NetRevenue_adjust","traffic_unit",
-#                                      "traffic_mkt",
-#                                      "sold_price" ,"decomp_value" ,"decomp_value_adjust"))
-
-
-
 print("!calc generating finished")
 
 
 
 #-------------------write csv， the other time --------------------------------#
-write_csv(ugg_decomp, paste(my_dir,"results", "ugg_baseline_decomp.csv", sep="/"))
-# write_csv(ugg_decomp_mapped_spd, paste(my_dir,"results", "ugg_baseline_decomp_with_spd.csv", sep="/"))
-write_csv(ugg_decomp_fit, paste(my_dir,"results", "ugg_actual_predict.csv", sep="/"))
-write_csv(ugg_decomp_agg, paste(my_dir,"results", "ugg_actual_agg.csv", sep="/"))
-# write_csv(celebrity_results, paste(my_dir,"results", "celebrity.csv", sep="/"))
+write_csv(my_decomp, paste(my_dir,"results", "my_baseline_decomp.csv", sep="/"))
+write_csv(my_decomp_fit, paste(my_dir,"results", "my_actual_predict.csv", sep="/"))
+write_csv(my_decomp_agg, paste(my_dir,"results", "my_actual_agg.csv", sep="/"))
 
 
 print("!calc generating finished")
-
-celebrity_excel<-createWorkbook()
-addWorksheet(celebrity_excel, sheetName = "celebrity")
-
-writeDataTable(celebrity_excel, "celebrity",x=celebrity_results)
-
-saveWorkbook(celebrity_excel, paste(my_dir,"results", "celebrity.xlsx", sep="/"),
-             overwrite = TRUE)
-
-
-# write_csv(spending, paste(my_dir,"results", "spending.csv", sep="/"))
-
-ym_decomp<-list.files(paste(my_dir, "decomp","Tmall ym" ,sep="/"), 
-                      full.names = TRUE, pattern = "*xlsx")
-
-tmall_ym<-sales_decompose(ym_decomp)
-tmall_ym<-re_distribute(my_raw_decomp=tmall_ym)
-# tmall_spd_ym<-map_spd(my_dataframe = tmall_ym, spd_data = spending)
-
-tmall_ym<-tmall_ym[, metric:= "Sales Unit"]
-tmall_ym<-tmall_ym[grepl("Traffic",Prodname),metric:= "Traffic"]
-
-setcolorder(tmall_ym, neworder = c("week","Prodlvl","Geoglvl","variable","season",
-                                   "IPweight", "var_map" , "group2" ,"group3",
-                                   "group4", "var_key", "year", "mat", "metric",
-                                   "decomp_unit", "sold_price", "decomp_value", 
-                                   "decomp_unit_adjust",
-                                   "decomp_value_adjust","traffic_unit",
-                                   "traffic_mkt","channel", "Geogname", "Prodname",
-                                   "geogkey","prodkey", "BRAND", "product",
-                                   "traffic_contri","actual_weekly","traffic_weekly"))
-
-
-
-#---------------------------Write Tmall----------------#
-write_csv(tmall_ym, paste(my_dir,"results", "tmall_baseline_decomp.csv", sep="/"))
-# write_csv(tmall_spd, paste(my_dir,"results", "tmall_baseline_decomp_with_spd.csv", sep="/"))
-# write_csv(redistributed_decomp, paste(my_dir,"results", "tmall_baseline_decomp.csv", sep="/"))
-
-print("!calc generating of Tmall finished")
-
-write_csv(ugg.cn, paste(my_dir,"results", "ugg.cn_baseline_decomp.csv", sep="/"))
-
-
-#--------------------------------------#
-re_distribute<-function(my_raw_decomp){
-  traffic_decomp<-my_raw_decomp[grepl("Traffic",product),]
-  sales_decomp<-my_raw_decomp[grepl("Sales Unit",product),]
-  
-  traffic_actual<-traffic_decomp[var_map=="Actual",
-                                 by=.(channel, week, product, Geogname, Prodname, prodkey,
-                                      Prodlvl, geogkey, Geoglvl, BRAND, variable),
-                                 .(actual_weekly=sum(decomp_unit_bump, na.rm=TRUE))]
-  
-  traffic_decomp<-merge(traffic_decomp,traffic_actual,
-                        by=c("channel", "week", "product", "Geogname", "Prodname", "prodkey",
-                             "Prodlvl", "geogkey", "Geoglvl", "BRAND"),
-                        all.x=TRUE)
-  traffic_decomp<-traffic_decomp[,variable.y:=NULL]
-  setnames(traffic_decomp, "variable.x", "variable")
-  traffic_decomp<-traffic_decomp[,traffic_contri:=decomp_unit_bump/actual_weekly]
-  
-  sales_decomp_traffic<-sales_decomp[var_map=="Traffic",
-                                     by=.(channel, week, product, Geogname, Prodname, prodkey,
-                                          Prodlvl, geogkey, Geoglvl, BRAND, variable),
-                                     .(traffic_weekly=sum(decomp_unit_bump, na.rm=TRUE))]
-  
-  sales_decomp_traffic<-merge(traffic_decomp,
-                              sales_decomp_traffic[,-c("variable","product",
-                                                       "Prodname","prodkey","BRAND")],
-                              by=c("channel", "week", 
-                                   "Geogname",
-                                   "Prodlvl", "geogkey", "Geoglvl"), 
-                              all.x=TRUE)
-  sales_decomp_traffic<-sales_decomp_traffic[,traffic_unit:=traffic_weekly*traffic_contri]
-  
-  # sales_decomp_traffic<-sales_decomp_traffic[!(var_map %in%
-  #                               c("Intercept","Actual", "Predict", "Residual")),]
-  sales_traffic_mkt<-sales_decomp_traffic[!(group4 %in%
-                                              c("Base","Actual", "Predict", "Residual")),
-                                          by=.(channel, week, Geogname,  
-                                               Prodlvl, geogkey, Geoglvl),
-                                          .(traffic_mkt=sum(traffic_unit, na.rm=TRUE))]
-  
-  sales_decomp_traffic<-merge(sales_decomp_traffic, sales_traffic_mkt, 
-                              by=c("channel", "week", "Geogname",  
-                                   "Prodlvl", "geogkey", "Geoglvl"))
-  my_cols<-c("channel", "week", "Geogname",
-             "Prodlvl", "geogkey", "Geoglvl",
-             "traffic_contri", "variable",
-             "actual_weekly","traffic_weekly", "traffic_unit","traffic_mkt")
-  
-  sales_decomp<-merge(sales_decomp, 
-                      sales_decomp_traffic[!(group4 %in%
-                                               c("Base","Actual", "Predict", "Residual")),..my_cols],
-                      by=c("channel", "week", "Geogname",
-                           "Prodlvl", "geogkey", "Geoglvl",
-                           "variable"),
-                      all=TRUE)                         
-  sales_decomp<-setnafill(sales_decomp, fill = 0, cols = c("traffic_unit","traffic_mkt"))
-  sales_decomp<-sales_decomp[,decomp_unit_adjust:= decomp_unit_bump + traffic_unit]
-  sales_decomp<-sales_decomp[var_map=="Traffic",
-                             decomp_unit_adjust:= decomp_unit_bump - traffic_mkt]
-  
-  sales_decomp<-sales_decomp[,c("decomp_value_adjust", "decomp_NetRevenue_adjust"):= 
-                               list(decomp_unit_adjust*sold_price,
-                                    decomp_unit_adjust*net_price )]
-  traffic_decomp<-traffic_decomp[,c("decomp_unit_adjust", "decomp_value_adjust","decomp_NetRevenue_adjust"):=
-                                   list(decomp_unit, decomp_value, decomp_value)]
-  redistributed_decomp<-bind_rows(sales_decomp, traffic_decomp)
-  return(redistributed_decomp)
-  
-}
-
-
-#############
-whs_covid<-read_excel("C:/005 Decker/005 Decker/Raw Data/WHS_Retailer_Partner/疫情期间销售追踪_0317 - Sarah - 01122021.xlsx",
-                      sheet = "master", skip=3)
-
-
-names(whs_covid)[1:6]<-c("partner", "store_id", "store_name_en",
-                         "city", "open_date", "close_date")
-
-whs_covid<-whs_covid%>%
-  filter(!is.na(store_id))
-
-# unique(whs_covid$store_name_en)
-# names(whs_covid)<-as.character(names(whs_covid))
-# names<-paste("week", 1:69, sep = "_")
-# names<-data.frame(map_week=names, week=names(whs_covid)[7:75])
-
-# names(whs_covid)[7:75]<-names$map_week
-whs_covid<-whs_covid%>%
-  mutate_at(.vars = 7:75, ~as.character(.))
-
-
-whs_covid_long<-setDT(whs_covid)%>%
-  pivot_longer(cols = 7:75, names_to = "map_week")
-
-head(whs_covid_long)
-
-whs_covid_0113<-createWorkbook()
-addWorksheet(whs_covid_0113, sheetName = "whs")
-
-writeDataTable(whs_covid_0113, "whs",x=whs_covid_long)
-
-saveWorkbook(whs_covid_0113, "C:/005 Decker/005 Decker/Raw Data/WHS_Retailer_Partner/whs_covid_0113.xlsx",
-             overwrite = TRUE)
-
-
-
-
-
-
 
